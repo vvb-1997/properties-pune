@@ -1,0 +1,21 @@
+# TODO
+Featues need 
+- [Done] Dark Mode
+- [Do not work Now - Need research] Connect to RERA - API Needed / Or collect once and refresh every day
+- [Do not work Now - Need research] Builder past history - API Needed / Or collect data one time
+- [Done] Nearby Services - School, Hospital, Mall, Garden, etc.
+- [Done] Make Map full screen
+- [Done] A tab to save files - which can be used to save pdfs, images, docs and other files
+- File tab features
+    - [Done] Pop up to open the files based on extension for now, but verify based on file content.
+    - [Done] Load the file in same browser tab - pdf, images, docs, and any other file type which can be opened. 
+- Properties tab
+    - [Done] Add Clone for properties. (plan/004)
+    - [Done] Multiple offerings per building, with shared and per-offering files. (plan/005)
+    - [Done] Provide a way to add remark while adding offerings.
+    - [Done] Also add an inventory for the properties available.
+- Auto-ratings from Google + free map data (plan/006)
+    - [Done] Script, rules, `RATINGS.md`, free path and Google adapter with spend guard.
+    - [Done] `docs/RATING-SOURCES.md` and README section.
+    - [Done] Set real office location in `data/rating-config.js`; also shown on the map.
+    - [Done] Server route `POST /api/autorate/:id`, `validate()` check for `p.auto`, `p.auto` kept through dashboard saves, badges, "Apply suggestions to unrated" and "Run auto-rating" button (step 4).

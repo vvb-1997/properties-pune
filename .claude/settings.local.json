@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(node -e \"const fs=require\\('fs'\\);const s=fs.readFileSync\\('index.html','utf8'\\);const m=[...s.matchAll\\(/<script>\\([\\\\s\\\\S]*?\\)<\\\\/script>/g\\)];new Function\\(m[m.length-1][1]\\);console.log\\('index.html script parses OK'\\)\")",
+      "Bash(node --check data/localities.js)",
+      "Bash(node --check data/properties.js)",
+      "Bash(node -e \"const r=8.5/1200,n=240,l=1e7;console.log\\('EMI 1Cr@8.5%/20y =',Math.round\\(l*r*Math.pow\\(1+r,n\\)/\\(Math.pow\\(1+r,n\\)-1\\)\\)\\)\")",
+      "Skill(claude-in-chrome)",
+      "Bash(node *)"
+    ]
+  }
+}

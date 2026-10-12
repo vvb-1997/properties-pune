@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pune Home Hunt Dashboard</title>
+<script>try{document.documentElement.dataset.theme=localStorage.getItem('pune_theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light')}catch{}</script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--ink:#1c2430;--mute:#6a7587;--line:#e3e7ee;--accent:#2457d6;--good:#1b8a4b;--warn:#c27a00;--bad:#c62f2f;--inp:#fff;--gbg:#e1f4e8;--wbg:#fff1d6;--bbg:#fbe3e3;--mbg:#eceff4;--sec:#e8ecf5;--delbg:#fbe9e9}
+[data-theme="dark"]{color-scheme:dark;--bg:#0f141c;--card:#18202c;--ink:#e6eaf2;--mute:#97a3b8;--line:#2b3546;--accent:#5b8cff;--good:#4cc77e;--warn:#e5a03a;--bad:#ff6b6b;--inp:#0f141c;--gbg:#16382a;--wbg:#40320f;--bbg:#442020;--mbg:#273042;--sec:#262f40;--delbg:#442020}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:#14213d;color:#fff;padding:12px 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+header h1{font-size:18px;margin:0}
+nav{display:flex;gap:4px;flex-wrap:wrap}
+nav button{background:transparent;color:#cfd8ea;border:0;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:14px}
+nav button.on{background:#2b3d68;color:#fff}
+main{max-width:min(1800px,98vw);margin:0 auto;padding:12px}
+section{display:none}section.on{display:block}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+.card h2,.card h3{margin:0 0 10px;font-size:15px}
+.kpi .v{font-size:22px;font-weight:700}.kpi .l{color:var(--mute);font-size:12px}
+label{display:block;font-size:12px;color:var(--mute);margin-bottom:2px}
+input,select,textarea{width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:6px;font:inherit;background:var(--inp);color:var(--ink)}
+textarea{min-height:60px}
+.row{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin-bottom:8px}
+button.btn{background:var(--accent);color:#fff;border:0;padding:8px 14px;border-radius:6px;cursor:pointer;font:inherit}
+button.btn.sec{background:var(--sec);color:var(--ink)}
+button.btn.del{background:var(--delbg);color:var(--bad)}
+table{width:100%;border-collapse:collapse}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font-size:12px;color:var(--mute);cursor:pointer;user-select:none}
+.tw{overflow-x:auto}
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:600}
+.b-good{background:var(--gbg);color:var(--good)}.b-warn{background:var(--wbg);color:var(--warn)}.b-bad{background:var(--bbg);color:var(--bad)}.b-mute{background:var(--mbg);color:var(--mute)}
+.note{color:var(--mute);font-size:12px}
+.flag{background:var(--bbg);color:var(--bad);padding:8px 10px;border-radius:6px;margin-top:8px}
+.ok{background:var(--gbg);color:var(--good);padding:8px 10px;border-radius:6px;margin-top:8px}
+.warnbox{background:var(--wbg);color:var(--warn);padding:8px 10px;border-radius:6px;margin-top:8px}
+#map{height:520px;border-radius:10px;border:1px solid var(--line)}
+dialog{background:var(--card);color:var(--ink);border:0;border-radius:12px;padding:0;width:min(760px,96vw);max-height:92vh}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.dlg{padding:16px;overflow:auto;max-height:92vh}
+.sl{display:grid;grid-template-columns:1fr 110px 24px;gap:8px;align-items:center;margin-bottom:4px}
+.sl input[type=range]{padding:0}
+.au{font-size:11px;color:var(--mute);margin-left:6px;cursor:help;font-weight:400}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:end}
+.toolbar>div{min-width:130px}
+.loc h3{display:flex;justify-content:space-between;gap:8px}
+.loc ul{margin:4px 0 8px;padding-left:18px}
+nav button.theme{border:1px solid #2b3d68}
+[data-theme="dark"] .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.95) contrast(.9)}
+[data-theme="dark"] .leaflet-popup-content-wrapper,[data-theme="dark"] .leaflet-popup-tip,[data-theme="dark"] .leaflet-tooltip{background:var(--card);color:var(--ink)}
+#mapwrap{position:relative}
+#mapwrap:fullscreen,#mapwrap.mapfull{background:var(--card)}
+#mapwrap.mapfull{position:fixed;inset:0;z-index:1000}
+#mapwrap:fullscreen #map,#mapwrap.mapfull #map{height:100vh;border:0;border-radius:0}
+.mapbar{position:absolute;top:10px;right:10px;z-index:1000;display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100% - 70px)}
+.mapbar label{display:flex;gap:4px;align-items:center;margin:0;background:var(--card);color:var(--ink);padding:4px 8px;border-radius:6px;border:1px solid var(--line);font-size:12px}
+.mapbar label input{width:auto}
+#ptable tbody tr{cursor:pointer}
+#ptable tr.sub td{background:var(--bg);font-size:13px}
+.tg{cursor:pointer;user-select:none}
+.nb h3{margin:12px 0 4px}.nb ol{margin:0;padding-left:20px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Pune Home Hunt</h1>
+  <nav id="nav">
+    <button data-t="overview" class="on">Overview</button>
+    <button data-t="props">Properties</button>
+    <button data-t="compare">Compare</button>
+    <button data-t="mapsec">Map</button>
+    <button data-t="locs">Localities</button>
+    <button data-t="files">Files</button>
+    <button id="theme" class="theme" title="Toggle dark mode"></button>
+  </nav>
+</header>
+<main>
+
+<section id="overview" class="on">
+  <div class="grid g2">
+    <div class="card">
+      <h2>Affordability</h2>
+      <div class="row">
+        <div><label>In-hand salary / month (₹)</label><input id="a_sal" type="number"></div>
+        <div><label>Cash available (₹)</label><input id="a_cash" type="number"></div>
+        <div><label>Max budget (₹)</label><input id="a_bud" type="number"></div>
+      </div>
+      <div class="row">
+        <div><label>Loan rate % p.a.</label><input id="a_rate" type="number" step="0.05"></div>
+        <div><label>Tenure (years)</label><input id="a_ten" type="number"></div>
+        <div><label>Max EMI % of income</label><input id="a_cap" type="number"></div>
+      </div>
+      <div class="row">
+        <div><label>Stamp duty + registration %</label><input id="a_stamp" type="number" step="0.1"></div>
+        <div><label>GST % (under-construction only)</label><input id="a_gst" type="number" step="0.1"></div>
+        <div><label>Other one-time costs (₹): parking, deposit, legal</label><input id="a_other" type="number"></div>
+      </div>
+      <div class="note">Existing EMIs/expenses are not included. If you have other loans, reduce the EMI cap accordingly.</div>
+    </div>
+    <div class="card">
+      <h2>What you can afford</h2>
+      <div class="grid g4" id="afford_kpis"></div>
+      <div id="afford_msg"></div>
+    </div>
+  </div>
+
+  <div class="grid g2" style="margin-top:12px">
+    <div class="card"><h2>Properties by score</h2><canvas id="ch_score" height="200"></canvas></div>
+    <div class="card"><h2>Price per sq ft vs locality average</h2><canvas id="ch_rate" height="200"></canvas></div>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <h2>Shortlist (best score first, deal-breakers last)</h2>
+    <div class="tw" id="shortlist"></div>
+  </div>
+</section>
+
+<section id="props">
+  <div class="card">
+    <div class="toolbar">
+      <div><label>Locality</label><select id="f_loc"></select></div>
+      <div><label>BHK</label><select id="f_bhk"><option value="">All</option><option>2</option><option>2.5</option><option>3</option></select></div>
+      <div><label>Max price (₹ L)</label><input id="f_price" type="number" placeholder="130"></div>
+      <div><label>Search</label><input id="f_q" placeholder="name / builder"></div>
+      <button class="btn" id="add">+ Add property</button>
+      <button class="btn sec" id="exp">Export JSON</button>
+      <button class="btn sec" id="imp">Import JSON</button>
+      <button class="btn sec" id="wts">Score weights</button>
+      <input type="file" id="impfile" accept="application/json" style="display:none">
+    </div>
+    <div class="tw"><table id="ptable"></table></div>
+    <div class="note" style="margin-top:8px">Sample properties are placeholders. Delete them and add the ones you actually visit. Data is saved in this browser only, so use Export JSON for backup.</div>
+  </div>
+</section>
+
+<section id="compare">
+  <div class="card">
+    <h2>Compare (pick 2 to 4)</h2>
+    <div id="cmp_pick" class="toolbar"></div>
+    <div class="grid g2">
+      <div><canvas id="ch_radar" height="260"></canvas></div>
+      <div class="tw" id="cmp_table"></div>
+    </div>
+  </div>
+</section>
+
+<section id="mapsec">
+  <div class="card">
+    <div id="mapwrap">
+      <div id="map"></div>
+      <div class="mapbar" id="mapbar">
+        <span id="nbctl" style="display:none;gap:6px;flex-wrap:wrap;justify-content:flex-end"></span>
+        <button class="btn" id="mapfs">Full screen</button>
+      </div>
+    </div>
+    <div class="note" style="margin-top:6px">Pins: green = score 75+, amber = 55-74, red = below 55 or deal-breaker. Properties without coordinates are placed at the locality centre. Locality circles show approximate centres.</div>
+  </div>
+</section>
+
+<section id="locs">
+  <div class="note" id="loc_note" style="margin-bottom:8px"></div>
+  <div class="grid g2" id="loc_cards"></div>
+</section>
+
+<section id="files">
+  <div class="card">
+    <h2>Files</h2>
+    <div class="note" id="files_note" style="margin-bottom:8px"></div>
+    <div class="toolbar">
+      <div><label>Files (pdf, images, doc, xls, txt, csv; max 25 MB each)</label><input type="file" id="fl_pick" multiple></div>
+      <div><label>Building</label><select id="fl_prop"></select></div>
+      <div id="fl_unitwrap"><label>Offerings (none ticked = shared by all)</label><div id="fl_units"></div></div>
+      <button class="btn" id="fl_up">Upload</button>
+    </div>
+    <div class="toolbar" style="margin-top:8px"><div><label>Show files for</label><select id="fl_filter"></select></div></div>
+    <div class="note" id="fl_status"></div>
+    <div class="tw"><table id="fl_table"></table></div>
+    <div class="note" style="margin-top:8px">Files are stored in the files/ folder next to server.js. They are not part of Export JSON.</div>
+  </div>
+</section>
+
+</main>
+
+<dialog id="dlg"><div class="dlg" id="dlg_body"></div></dialog>
+<dialog id="viewer" style="width:min(1100px,96vw);height:90vh;max-height:90vh">
+  <div style="display:flex;flex-direction:column;height:100%">
+    <div style="display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line,#8884)">
+      <b id="v_name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></b>
+      <a id="v_dl" class="btn sec" style="text-decoration:none" download>Download</a>
+      <button class="btn sec" id="v_close">Close</button>
+    </div>
+    <div id="v_body" style="flex:1;overflow:auto;padding:12px;min-height:0"></div>
+  </div>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="data/localities.js"></script>
+<script src="data/properties.js"></script>
+<script src="data/rating-config.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LOCS = window.LOCALITIES || [];
+const locByKey = k => LOCS.find(l => l.key === k);
+
+const CRITERIA = [
+  {k:'water',   n:'Water supply (no tanker dependency)', must:true,  w:10},
+  {k:'power',   n:'Power (few outages, backup)',          must:true,  w:10},
+  {k:'flood',   n:'No waterlogging in monsoon',           must:true,  w:10},
+  {k:'rera',    n:'RERA / OC / clear title',              must:true,  w:8},
+  {k:'schools', n:'Schools nearby',                       w:8},
+  {k:'hospitals',n:'Hospitals nearby',                    w:8},
+  {k:'mall',    n:'Malls / market / daily needs',         w:5},
+  {k:'garden',  n:'Gardens / open space',                 w:5},
+  {k:'transport',n:'Metro / transport access',            w:6},
+  {k:'commute', n:'Commute to work',                      w:6},
+  {k:'safety',  n:'Safety / neighbourhood',               w:5},
+  {k:'amenities',n:'Society amenities',                   w:4},
+  {k:'builder', n:'Builder reputation',                   w:5},
+  {k:'resale',  n:'Resale / appreciation',                w:4},
+];
+
+const DEFAULT_SETTINGS = {sal:170000, cash:3000000, bud:13000000, rate:8.5, ten:20, cap:40, stamp:7, gst:5, other:500000};
+const LS = {props:'pune_props_v1', set:'pune_settings_v1', wts:'pune_weights_v1', nb:'pune_nearby_v1', theme:'pune_theme'};
+const load = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } };
+const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+
+let settings = {...DEFAULT_SETTINGS, ...load(LS.set, {})};
+let weights = {...Object.fromEntries(CRITERIA.map(c => [c.k, c.w])), ...load(LS.wts, {})};
+// Flat v1 rows (bhk/price/carpet on the property) become a building with one offering; ids are kept so old file tags still resolve.
+const migrate = arr => arr.map(p => p.units ? p : (({bhk, price, carpet, sba, nego, ...b}) => ({...b, units: [{id: p.id, bhk, price, carpet, sba, nego}]}))(p));
+const rawProps = load(LS.props, null) ?? (window.SAMPLE_PROPERTIES || []).map(p => ({...p}));
+const needMigrate = rawProps.some(p => !p.units);
+let buildings = migrate(rawProps);
+// One row per offering: building fields + unit fields, so scoring, table, compare and charts work per offering.
+const listings = () => buildings.flatMap(b => b.units.map(u => ({...b, ...u, notes: b.notes, id: u.id, buildingId: b.id, nUnits: b.units.length,
+  label: b.units.length > 1 ? `${b.name} · ${u.bhk} BHK` : b.name})));
+let sortKey = 'score', sortDir = -1;
+let cmpSel = [];
+let charts = {}, map, markers = [], nb = null, nbGroup;
+
+const inr = n => '₹' + Math.round(n).toLocaleString('en-IN');
+const cr = n => n >= 1e7 ? '₹' + (n/1e7).toFixed(2) + ' Cr' : '₹' + (n/1e5).toFixed(1) + ' L';
+
+function emi(loan, ratePct, years) {
+  if (loan <= 0) return 0;
+  const r = ratePct/1200, n = years*12;
+  if (r === 0) return loan/n;
+  return loan * r * Math.pow(1+r, n) / (Math.pow(1+r, n) - 1);
+}
+function loanForEmi(e, ratePct, years) {
+  const r = ratePct/1200, n = years*12;
+  if (r === 0) return e*n;
+  return e * (Math.pow(1+r, n) - 1) / (r * Math.pow(1+r, n));
+}
+function allIn(p) {
+  const gst = p.status === 'uc' ? settings.gst : 0;
+  return p.price * (1 + (settings.stamp + gst)/100) + settings.other;
+}
+function finance(p) {
+  const total = allIn(p);
+  const loan = Math.max(0, total - settings.cash);
+  const e = emi(loan, settings.rate, settings.ten);
+  const ratio = e / settings.sal * 100;
+  return {total, loan, emi: e, ratio};
+}
+function scoreOf(p) {
+  const s = p.scores || {};
+  let sum = 0, wsum = 0;
+  CRITERIA.forEach(c => { if (s[c.k]) { sum += s[c.k] * weights[c.k]; wsum += weights[c.k]; } });
+  return wsum ? Math.round(sum / wsum * 20) : 0;
+}
+function dealBreakers(p) {
+  const s = p.scores || {};
+  return CRITERIA.filter(c => c.must && s[c.k] && s[c.k] <= 2).map(c => c.n);
+}
+function rateInfo(p) {
+  const sba = p.sba > 0 ? p.sba : p.carpet > 0 ? p.carpet * 1.3 : 0;
+  const area = sba > 0 ? p.price / sba : 0;
+  const loc = locByKey(p.locality);
+  if (!area || !loc) return {area, loc};
+  const delta = (area - loc.rateAvg) / loc.rateAvg * 100;
+  let tag = 'fair', cls = 'b-warn';
+  if (area < loc.rateMin) { tag = 'below market'; cls = 'b-good'; }
+  else if (area > loc.rateMax) { tag = 'premium'; cls = 'b-bad'; }
+  else if (delta < -5) { tag = 'good value'; cls = 'b-good'; }
+  return {area, loc, delta, tag, cls};
+}
+const scoreCls = s => s >= 75 ? 'b-good' : s >= 55 ? 'b-warn' : 'b-bad';
+
+/* ---------- navigation ---------- */
+$('#nav').addEventListener('click', e => {
+  const t = e.target.dataset.t; if (!t) return;
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b === e.target));
+  document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === t));
+  if (t === 'mapsec') { renderMap(); setTimeout(() => map && map.invalidateSize(), 50); }
+  if (t === 'compare') renderCompare();
+  if (t === 'files') renderFiles();
+});
+
+/* ---------- affordability ---------- */
+const AF = {sal:'a_sal', cash:'a_cash', bud:'a_bud', rate:'a_rate', ten:'a_ten', cap:'a_cap', stamp:'a_stamp', gst:'a_gst', other:'a_other'};
+Object.entries(AF).forEach(([k, id]) => {
+  const el = document.getElementById(id);
+  el.value = settings[k];
+  el.addEventListener('input', () => {
+    const v = parseFloat(el.value);
+    if (!isNaN(v)) { settings[k] = v; save(LS.set, settings); renderAll(); }
+  });
+});
+
+function renderAfford() {
+  const cap = settings.sal * settings.cap / 100;
+  const maxLoan = loanForEmi(cap, settings.rate, settings.ten);
+  const maxPrice = (maxLoan + settings.cash - settings.other) / (1 + settings.stamp/100);
+  const atBud = finance({price: settings.bud, status: 'ready'});
+  const budRatio = atBud.ratio;
+  $('#afford_kpis').innerHTML = [
+    ['Comfortable max price', cr(maxPrice), `at ${settings.cap}% EMI cap (ready-to-move)`],
+    ['EMI cap', inr(cap), `${settings.cap}% of ${inr(settings.sal)}`],
+    ['EMI at your budget', inr(atBud.emi), `${budRatio.toFixed(0)}% of income`],
+    ['Loan at your budget', cr(atBud.loan), `all-in cost ${cr(atBud.total)}`],
+  ].map(([l, v, s]) => `<div class="kpi card"><div class="l">${l}</div><div class="v">${v}</div><div class="note">${s}</div></div>`).join('');
+  let msg;
+  if (budRatio > 50) msg = `<div class="flag">At ${cr(settings.bud)} the EMI is ${budRatio.toFixed(0)}% of income. That is stretched, especially when planning a family (childcare, school fees). Aim for ${cr(maxPrice)} or raise the down payment.</div>`;
+  else if (budRatio > settings.cap) msg = `<div class="warnbox">At ${cr(settings.bud)} the EMI is ${budRatio.toFixed(0)}% of income, above your ${settings.cap}% cap. Properties up to about ${cr(maxPrice)} fit comfortably.</div>`;
+  else msg = `<div class="ok">Your full budget fits within the ${settings.cap}% EMI cap.</div>`;
+  $('#afford_msg').innerHTML = msg;
+}
+
+/* ---------- filters ---------- */
+function fillFilters() {
+  const sel = $('#f_loc'); const cur = sel.value;
+  sel.innerHTML = '<option value="">All</option>' + LOCS.map(l => `<option value="${l.key}">${esc(l.name)}</option>`).join('');
+  sel.value = cur;
+}
+['f_loc','f_bhk','f_price','f_q'].forEach(id => $('#'+id).addEventListener('input', renderTable));
+
+function enrich(p) {
+  const f = finance(p), r = rateInfo(p);
+  return {...p, _score: scoreOf(p), _db: dealBreakers(p), _fin: f, _rate: r};
+}
+function filtered() {
+  const loc = $('#f_loc').value, bhk = $('#f_bhk').value, mp = parseFloat($('#f_price').value), q = $('#f_q').value.toLowerCase();
+  return listings().map(enrich).filter(p =>
+    (!loc || p.locality === loc) &&
+    (!bhk || String(p.bhk) === bhk) &&
+    (isNaN(mp) || p.price <= mp * 1e5) &&
+    (!q || (p.name + ' ' + (p.builder || '')).toLowerCase().includes(q)));
+}
+
+const COLS = [
+  ['name','Property'], ['locality','Locality'], ['bhk','BHK'], ['price','Price'], ['carpet','Carpet sqft'],
+  ['rate','₹/sqft (saleable)'], ['mkt','vs market'], ['status','Status'], ['emi','EMI'], ['score','Score'], ['act','']
+];
+function sortVal(p, k) {
+  switch (k) {
+    case 'rate': return p._rate.area || 0;
+    case 'mkt': return p._rate.delta ?? 0;
+    case 'emi': return p._fin.emi;
+    case 'score': return p._db.length ? p._score - 1000 : p._score;
+    default: return p[k];
+  }
+}
+const collapsed = new Set();
+function renderTable() {
+  const cmp = (a, b) => { const x = sortVal(a, sortKey), y = sortVal(b, sortKey); return (x > y ? 1 : x < y ? -1 : 0) * sortDir; };
+  const groups = new Map();
+  for (const p of filtered().sort(cmp)) (groups.get(p.buildingId) || groups.set(p.buildingId, []).get(p.buildingId)).push(p);
+  const unitCells = p => `<td>${esc(p.bhk)}</td><td>${cr(p.price)}</td><td>${esc(p.carpet || '-')}</td><td>${p._rate.area ? inr(p._rate.area) : '-'}</td>
+    <td>${p._rate.tag ? `<span class="badge ${p._rate.cls}">${p._rate.tag} ${p._rate.delta > 0 ? '+' : ''}${p._rate.delta.toFixed(0)}%</span>` : '-'}</td>`;
+  const emiCell = p => `<td>${inr(p._fin.emi)}<div class="note">${p._fin.ratio.toFixed(0)}% of income</div></td>`;
+  $('#ptable').innerHTML = '<thead><tr>' + COLS.map(([k, n]) => `<th data-k="${k}">${n}${sortKey === k ? (sortDir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('') + '</tr></thead><tbody>' +
+    ([...groups.values()].map(us => {
+      const p = us[0], multi = us.length > 1, open = !collapsed.has(p.buildingId);
+      const prices = us.map(u => u.price);
+      return `<tr data-b="${p.buildingId}">
+        <td>${multi ? `<span class="tg" data-tg="${p.buildingId}">${open ? '▾' : '▸'}</span> ` : ''}<b>${esc(p.name)}</b>${p.sample ? ' <span class="badge b-mute">sample</span>' : ''}<div class="note">${multi ? us.length + ' offerings · ' : ''}${esc(p.builder || '')}</div></td>
+        <td>${esc(locByKey(p.locality)?.name || p.locality)}</td>
+        ${multi ? `<td>${[...new Set(us.map(u => u.bhk))].join(', ')}</td><td>${cr(Math.min(...prices))} – ${cr(Math.max(...prices))}</td><td></td><td></td><td></td>` : unitCells(p)}
+        <td>${p.status === 'uc' ? 'Under constr.' : 'Ready'}${p.rera ? '' : ' <span class="badge b-bad">no RERA</span>'}</td>
+        ${multi ? '<td></td>' : emiCell(p)}
+        <td><span class="badge ${p._db.length ? 'b-bad' : scoreCls(p._score)}">${p._score}</span>${p._db.length ? `<div class="note" style="color:var(--bad)" title="${esc(p._db.join(', '))}">deal-breaker</div>` : ''}</td>
+        <td><button class="btn sec" data-edit="${p.buildingId}">Edit</button> <button class="btn sec" data-nb="${p.buildingId}">Nearby</button> <button class="btn sec" data-clone="${p.buildingId}">Clone</button></td>
+      </tr>` + (multi && open ? us.map(u => `<tr class="sub" data-b="${u.buildingId}"><td class="note" style="padding-left:28px">↳ ${esc(u.notes && u.remark ? u.notes + ' · ' + u.remark : u.notes || u.remark || 'Offering')}${u.inventory != null ? ` · ${u.inventory} available` : ''}</td><td></td>${unitCells(u)}<td></td>${emiCell(u)}<td></td><td></td></tr>`).join('') : '');
+    }).join('') || `<tr><td colspan="${COLS.length}" class="note">No properties match. Click "+ Add property".</td></tr>`) + '</tbody>';
+}
+$('#ptable').addEventListener('click', e => {
+  const th = e.target.closest('th');
+  if (th) { const k = th.dataset.k; if (!k || k === 'act') return; sortDir = sortKey === k ? -sortDir : 1; sortKey = k; renderTable(); return; }
+  const id = e.target.dataset.edit; if (id) openForm(id);
+  if (e.target.dataset.nb) openNearby(e.target.dataset.nb);
+  if (e.target.dataset.clone) cloneBuilding(e.target.dataset.clone);
+  if (e.target.dataset.tg) { collapsed.has(e.target.dataset.tg) ? collapsed.delete(e.target.dataset.tg) : collapsed.add(e.target.dataset.tg); renderTable(); return; }
+  if (!e.target.closest('button')) { const id = e.target.closest('tbody tr')?.dataset.b; if (id) openDetails(id); }
+});
+
+/* ---------- read-only details popup (closes on outside click) ---------- */
+function openDetails(id) {
+  const p = buildings.find(x => x.id === id); if (!p) return;
+  const kv = (l, v) => v ? `<div><label>${l}</label><div>${esc(v)}</div></div>` : '';
+  $('#dlg_body').innerHTML = `<div class="det"><h2>${esc(p.name)}</h2>
+    <div class="row">${kv('Builder', p.builder)}${kv('Locality', locByKey(p.locality)?.name || p.locality)}${kv('Status', p.status === 'uc' ? 'Under construction' : 'Ready / OC')}
+    ${kv('RERA', p.rera ? 'Yes' + (p.reraNo ? ' · ' + p.reraNo : '') : 'No / unknown')}${kv('Possession', p.possession)}${kv('Visit date', p.visitDate)}${kv('Broker', p.broker)}
+    ${p.lat != null && p.lng != null ? kv('Coordinates', p.lat + ', ' + p.lng) : ''}</div>
+    ${p.link ? `<div><label>Listing</label><a href="${esc(p.link)}" target="_blank" rel="noopener">${esc(p.link)}</a></div>` : ''}
+    <h3>Offerings</h3>
+    <div class="tw"><table><thead><tr><th>BHK</th><th>Price</th><th>Carpet</th><th>Saleable</th><th>Nego</th><th>Available</th><th>Notes</th><th>Remark</th></tr></thead><tbody>${p.units.map(u =>
+      `<tr><td>${esc(u.bhk)}</td><td>${cr(u.price)}</td><td>${esc(u.carpet || '-')}</td><td>${esc(u.sba || '-')}</td><td>${u.nego ? inr(u.nego) : '-'}</td><td>${u.inventory ?? '-'}</td><td>${esc(u.notes || '')}</td><td>${esc(u.remark || '')}</td></tr>`).join('')}</tbody></table></div>
+    <h3>Ratings</h3>
+    <div class="row">${CRITERIA.map(c => `<div>${c.n}: <b>${p.scores?.[c.k] || '-'}</b></div>`).join('')}</div>
+    ${p.notes ? `<h3>Visit notes</h3><div style="white-space:pre-wrap">${esc(p.notes)}</div>` : ''}
+    <div class="toolbar" style="justify-content:flex-end;margin-top:12px"><button class="btn sec" id="d_close">Close</button><button class="btn" id="d_edit">Edit</button></div></div>`;
+  $('#d_close').onclick = () => $('#dlg').close();
+  $('#d_edit').onclick = () => openForm(id);
+  $('#dlg').showModal();
+}
+// Outside click closes the details popup only; forms keep their unsaved input.
+$('#dlg').addEventListener('click', e => { if (e.target.id === 'dlg' && $('#dlg_body .det')) e.target.close(); });
+
+/* ---------- add / edit form ---------- */
+const uid = () => 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+// Clone = copy a whole building (all offerings) and open the copy in the edit form.
+function cloneBuilding(id) {
+  const b = buildings.find(x => x.id === id); if (!b) return;
+  const c = JSON.parse(JSON.stringify(b));
+  c.id = uid(); c.name += ' (copy)'; c.units.forEach(u => u.id = uid());
+  buildings.push(c); persist(); openForm(c.id);
+}
+const unitRow = u => `<div class="row urow" data-uid="${esc(u.id)}" style="border:1px solid var(--line);border-radius:8px;padding:8px">
+  <div><label>BHK</label><select class="u_bhk">${[...new Set([2, 2.5, 3, 4, +u.bhk || 2])].sort((a, b) => a - b).map(b => `<option ${b == u.bhk ? 'selected' : ''}>${b}</option>`).join('')}</select></div>
+  <div><label>Quoted price (₹)</label><input class="u_price" type="number" value="${u.price || 0}"></div>
+  <div><label>Carpet area (sq ft)</label><input class="u_carpet" type="number" value="${u.carpet || 0}"></div>
+  <div><label>Saleable / super built-up (sq ft)</label><input class="u_sba" type="number" value="${u.sba || ''}" placeholder="blank = carpet x 1.3"></div>
+  <div><label>Negotiation room (₹)</label><input class="u_nego" type="number" value="${u.nego || ''}"></div>
+  <div><label>Offering notes (floor, facing, unit no.)</label><input class="u_notes" value="${esc(u.notes)}"></div>
+  <div><label>Units available (inventory)</label><input class="u_inv" type="number" min="0" value="${u.inventory ?? ''}"></div>
+  <div style="grid-column:1/-1"><label>Remark</label><input class="u_remark" value="${esc(u.remark)}" placeholder="e.g. quoted by broker, deal terms, follow-up"></div>
+  <div style="align-self:end"><button class="btn del u_del" type="button">Remove</button></div></div>`;
+// Auto-rating suggestions (p.auto, from scripts/autorate.js). Never written into p.scores except by the Apply button.
+const auBadge = (p, k) => { const r = p.auto?.ratings?.[k]; return r ? `<span title="${esc(r.why)} [${esc(r.conf)} confidence]">auto ${r.v}</span>` : ''; };
+const auSummary = a => `Auto-rated ${esc(a.asOf)} (${esc(a.mode)}${a.approx ? ', approximate location' : ''}). Hover the "auto" badges for the reason. ` +
+  Object.entries(a.ratings).map(([k, r]) => `${esc(k)} ${r.v}${r.conf === 'low' ? '?' : ''}`).join(', ') + ' (? = low confidence). See RATINGS.md.' +
+  (a.notes?.length ? '<br>' + a.notes.map(esc).join('<br>') : '');
+function openForm(id) {
+  const p = buildings.find(x => x.id === id) || {id: uid(), name: '', locality: LOCS[0]?.key, status: 'ready', rera: true, scores: {}, units: [{id: uid(), bhk: 2, price: 0, carpet: 0}]};
+  const isNew = !buildings.find(x => x.id === id);
+  $('#dlg_body').innerHTML = `
+    <h2>${isNew ? 'Add' : 'Edit'} property</h2>
+    <div class="row">
+      <div><label>Name / project</label><input id="p_name" value="${esc(p.name)}"></div>
+      <div><label>Builder</label><input id="p_builder" value="${esc(p.builder)}"></div>
+      <div><label>Locality</label><select id="p_loc">${LOCS.map(l => `<option value="${l.key}" ${l.key === p.locality ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}</select></div>
+    </div>
+    <div class="row">
+      <div><label>Status</label><select id="p_status"><option value="ready" ${p.status === 'ready' ? 'selected' : ''}>Ready / OC</option><option value="uc" ${p.status === 'uc' ? 'selected' : ''}>Under construction</option></select></div>
+    </div>
+    <div class="row">
+      <div><label>RERA registered</label><select id="p_rera"><option value="1" ${p.rera ? 'selected' : ''}>Yes</option><option value="0" ${!p.rera ? 'selected' : ''}>No / unknown</option></select></div>
+      <div><label>RERA no.</label><input id="p_reranum" value="${esc(p.reraNo)}"></div>
+      <div><label>Possession (if UC)</label><input id="p_poss" value="${esc(p.possession)}" placeholder="Dec 2027"></div>
+      <div><label>Visit date</label><input id="p_date" type="date" value="${esc(p.visitDate)}"></div>
+    </div>
+    <div class="row">
+      <div><label>Broker / contact</label><input id="p_broker" value="${esc(p.broker)}"></div>
+      <div><label>Latitude</label><input id="p_lat" type="number" step="any" value="${p.lat ?? ''}" placeholder="optional"></div>
+      <div><label>Longitude</label><input id="p_lng" type="number" step="any" value="${p.lng ?? ''}" placeholder="optional"></div>
+    </div>
+    <div class="row"><div style="grid-column:1/-1"><label>Listing link</label><input id="p_link" value="${esc(p.link)}"></div></div>
+    <h3>Offerings</h3>
+    <div class="note">One row per BHK / unit type in this building. Ratings, notes and files below are shared by the building.</div>
+    <div id="u_list">${p.units.map(unitRow).join('')}</div>
+    <button class="btn sec" type="button" id="u_add" style="margin-top:6px">+ Add offering</button>
+    <h3>Ratings (1 = poor, 5 = excellent; leave 0 if unknown)</h3>
+    <div class="note">Red items are must-haves: a rating of 1 or 2 flags the property as a deal-breaker.</div>
+    ${isNew ? '' : `<div class="toolbar"><button class="btn sec" type="button" id="au_run">Run auto-rating</button><button class="btn sec" type="button" id="au_apply">Apply suggestions to unrated</button></div>
+    <div class="note" id="au_out">${p.auto ? auSummary(p.auto) : 'No auto-rating yet. Needs <code>node server.js</code> and saved coordinates.'}</div>`}
+    ${CRITERIA.map(c => `<div class="sl"><span ${c.must ? 'style="color:var(--bad);font-weight:600"' : ''}>${c.n}<span class="au" id="au_${c.k}">${auBadge(p, c.k)}</span></span><input type="range" min="0" max="5" step="1" id="s_${c.k}" value="${p.scores?.[c.k] || 0}"><b id="sv_${c.k}">${p.scores?.[c.k] || 0}</b></div>`).join('')}
+    <div class="row" style="margin-top:8px"><div style="grid-column:1/-1"><label>Visit notes (maintenance, society, water source, floor, facing, red flags, follow-ups)</label><textarea id="p_notes">${esc(p.notes)}</textarea></div></div>
+    <div class="toolbar" style="justify-content:flex-end">
+      ${isNew ? '' : '<button class="btn del" id="p_del">Delete</button>'}
+      <button class="btn sec" id="p_cancel">Cancel</button>
+      <button class="btn" id="p_save">Save</button>
+    </div>`;
+  CRITERIA.forEach(c => $('#s_' + c.k).addEventListener('input', e => $('#sv_' + c.k).textContent = e.target.value));
+  if (!isNew) {
+    $('#au_apply').onclick = () => CRITERIA.forEach(c => { const v = p.auto?.ratings?.[c.k]?.v, el = $('#s_' + c.k); if (v && !+el.value) { el.value = v; $('#sv_' + c.k).textContent = v; } });
+    $('#au_run').onclick = async e => {
+      const b = e.target, refresh = p.auto?.mode === 'google' && confirm('Already rated with Google recently. Re-run and spend Google quota?') ? '?refresh=1' : '';
+      b.disabled = true; $('#au_out').textContent = 'Rating... (about a minute; uses saved coordinates, not unsaved edits)';
+      try {
+        const r = await fetch('/api/autorate/' + p.id + refresh, {method: 'POST'}), j = await r.json();
+        if (!r.ok) throw new Error(j.error);
+        p.auto = j.auto; save(LS.props, buildings); syncServer();
+        CRITERIA.forEach(c => $('#au_' + c.k).innerHTML = auBadge(p, c.k));
+        $('#au_out').innerHTML = auSummary(j.auto) + (j.skipped ? ' <b>Skipped: rated by Google within 30 days.</b>' : ` Calls ${j.calls}, Google units ${j.spent}; this month ${esc(JSON.stringify(j.month))}.`);
+      } catch (err) { $('#au_out').textContent = 'Auto-rating failed: ' + err.message + ' (needs node server.js)'; }
+      b.disabled = false;
+    };
+  }
+  $('#u_add').onclick = () => $('#u_list').insertAdjacentHTML('beforeend', unitRow({id: uid(), bhk: 2, price: 0, carpet: 0}));
+  $('#u_list').onclick = e => {
+    if (!e.target.classList.contains('u_del')) return;
+    if (document.querySelectorAll('#u_list .urow').length < 2) { alert('A building needs at least one offering. Delete the building instead.'); return; }
+    e.target.closest('.urow').remove();
+  };
+  $('#p_cancel').onclick = () => $('#dlg').close();
+  if (!isNew) $('#p_del').onclick = () => { if (confirm('Delete this building and all its offerings?')) { buildings = buildings.filter(x => x.id !== id); persist(); $('#dlg').close(); } };
+  $('#p_save').onclick = () => {
+    const num = v => { const n = parseFloat(v); return isNaN(n) ? undefined : n; };
+    const np = {
+      id: p.id, name: $('#p_name').value.trim() || 'Untitled', builder: $('#p_builder').value.trim(), locality: $('#p_loc').value,
+            status: $('#p_status').value, rera: $('#p_rera').value === '1', reraNo: $('#p_reranum').value.trim(), possession: $('#p_poss').value.trim(),
+      visitDate: $('#p_date').value, broker: $('#p_broker').value.trim(),
+      lat: num($('#p_lat').value), lng: num($('#p_lng').value), link: $('#p_link').value.trim(), notes: $('#p_notes').value,
+      scores: Object.fromEntries(CRITERIA.map(c => [c.k, parseInt($('#s_' + c.k).value, 10)]).filter(([, v]) => v > 0)),
+      auto: p.auto,
+    };
+    np.units = [...document.querySelectorAll('#u_list .urow')].map(r => ({
+      id: r.dataset.uid, bhk: parseFloat(r.querySelector('.u_bhk').value), price: num(r.querySelector('.u_price').value) || 0,
+      carpet: num(r.querySelector('.u_carpet').value) || 0, sba: num(r.querySelector('.u_sba').value), nego: num(r.querySelector('.u_nego').value),
+      notes: r.querySelector('.u_notes').value.trim(),
+      inventory: num(r.querySelector('.u_inv').value), remark: r.querySelector('.u_remark').value.trim()}));
+    const i = buildings.findIndex(x => x.id === p.id);
+    if (i >= 0) buildings[i] = np; else buildings.push(np);
+    persist(); $('#dlg').close();
+  };
+  $('#dlg').showModal();
+}
+$('#add').onclick = () => openForm(null);
+
+$('#wts').onclick = () => {
+  $('#dlg_body').innerHTML = `<h2>Score weights</h2><div class="note">Higher weight means that criterion matters more in the 0-100 score.</div>` +
+    CRITERIA.map(c => `<div class="sl"><span>${c.n}</span><input type="range" min="0" max="15" id="w_${c.k}" value="${weights[c.k]}"><b id="wv_${c.k}">${weights[c.k]}</b></div>`).join('') +
+    `<div class="toolbar" style="justify-content:flex-end;margin-top:8px"><button class="btn sec" id="w_reset">Reset</button><button class="btn" id="w_save">Save</button></div>`;
+  CRITERIA.forEach(c => $('#w_' + c.k).addEventListener('input', e => $('#wv_' + c.k).textContent = e.target.value));
+  $('#w_reset').onclick = () => { CRITERIA.forEach(c => { $('#w_' + c.k).value = c.w; $('#wv_' + c.k).textContent = c.w; }); };
+  $('#w_save').onclick = () => { CRITERIA.forEach(c => weights[c.k] = parseInt($('#w_' + c.k).value, 10)); save(LS.wts, weights); $('#dlg').close(); renderAll(); };
+  $('#dlg').showModal();
+};
+
+/* ---------- export / import ---------- */
+$('#exp').onclick = () => {
+  const blob = new Blob([JSON.stringify({version: 2, settings, weights, properties: buildings}, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'pune-properties-' + new Date().toISOString().slice(0, 10) + '.json'; a.click(); URL.revokeObjectURL(a.href);
+};
+$('#imp').onclick = () => $('#impfile').click();
+$('#impfile').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const d = JSON.parse(await f.text());
+    if (!Array.isArray(d.properties)) throw new Error('missing properties array');
+    if (!confirm(`Replace current data with ${d.properties.length} properties from file?`)) return;
+    buildings = migrate(d.properties);
+    if (d.settings) { settings = {...DEFAULT_SETTINGS, ...d.settings}; save(LS.set, settings); Object.entries(AF).forEach(([k, id]) => document.getElementById(id).value = settings[k]); }
+    if (d.weights) { weights = {...weights, ...d.weights}; save(LS.wts, weights); }
+    persist();
+  } catch (err) { alert('Import failed: ' + err.message); }
+  e.target.value = '';
+};
+
+// The browser copy can predate a CLI auto-rating: take p.auto from the server file when it is newer.
+if (location.protocol.startsWith('http')) fetch('/api/properties').then(r => r.json()).then(srv => {
+  let n = 0;
+  for (const s of srv) { const b = buildings.find(x => x.id === s.id); if (b && s.auto && !(Date.parse(b.auto?.asOf) >= Date.parse(s.auto.asOf))) { b.auto = s.auto; n++; } }
+  if (n) { save(LS.props, buildings); renderAll(); }
+}).catch(() => {});
+function persist() { save(LS.props, buildings); renderAll(); syncServer(); }
+// Mirrors props into data/properties.js via server.js; silently skipped on file://.
+function syncServer() {
+  if (!location.protocol.startsWith('http')) return;
+  fetch('/api/properties', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(buildings)})
+    .then(r => r.ok ? null : r.json().then(j => { throw new Error(j.error); }))
+    .catch(e => alert('Saved in this browser only. Server sync failed: ' + e.message));
+}
+
+/* ---------- overview ---------- */
+/* ---------- theme ---------- */
+function chartTheme() {
+  if (!window.Chart) return;
+  const css = getComputedStyle(document.documentElement);
+  Chart.defaults.color = css.getPropertyValue('--mute').trim();
+  Chart.defaults.borderColor = css.getPropertyValue('--line').trim();
+  Chart.defaults.scales.radialLinear.ticks.backdropColor = 'transparent';
+}
+function setTheme(t, store) {
+  document.documentElement.dataset.theme = t;
+  if (store) try { localStorage.setItem(LS.theme, t); } catch {}
+  $('#theme').textContent = t === 'dark' ? '☀ Light' : '☾ Dark';
+  chartTheme();
+}
+$('#theme').onclick = () => { setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark', true); renderAll(); };
+setTheme(document.documentElement.dataset.theme || 'light');
+
+function mkChart(id, cfg) { charts[id]?.destroy(); if (window.Chart) charts[id] = new Chart(document.getElementById(id), cfg); }
+function renderOverview() {
+  const rows = listings().map(enrich);
+  const sorted = [...rows].sort((a, b) => (b._db.length ? b._score - 1000 : b._score) - (a._db.length ? a._score - 1000 : a._score));
+  $('#shortlist').innerHTML = '<table><thead><tr><th>#</th><th>Property</th><th>Price</th><th>vs market</th><th>EMI % income</th><th>Score</th><th>Issues</th></tr></thead><tbody>' +
+    (sorted.map((p, i) => {
+      const issues = [];
+      if (p._db.length) issues.push('Deal-breaker: ' + p._db.join(', '));
+      if (p.price > settings.bud) issues.push('Over budget');
+      if (p._fin.ratio > 50) issues.push('EMI very high');
+      if (!p.rera) issues.push('No RERA');
+      return `<tr><td>${i + 1}</td><td><b>${esc(p.label)}</b></td><td>${cr(p.price)}</td>
+      <td>${p._rate.tag ? `<span class="badge ${p._rate.cls}">${p._rate.tag}</span>` : '-'}</td>
+      <td>${p._fin.ratio.toFixed(0)}%</td><td><span class="badge ${p._db.length ? 'b-bad' : scoreCls(p._score)}">${p._score}</span></td>
+      <td class="note" style="white-space:normal">${esc(issues.join('; ') || 'None')}</td></tr>`;
+    }).join('') || '<tr><td colspan="7" class="note">No properties yet.</td></tr>') + '</tbody></table>';
+
+  const colour = p => p._db.length ? '#c62f2f' : p._score >= 75 ? '#1b8a4b' : p._score >= 55 ? '#c27a00' : '#c62f2f';
+  mkChart('ch_score', {type: 'bar', data: {labels: sorted.map(p => p.label), datasets: [{label: 'Score', data: sorted.map(p => p._score), backgroundColor: sorted.map(colour)}]},
+    options: {indexAxis: 'y', scales: {x: {min: 0, max: 100}}, plugins: {legend: {display: false}}}});
+  const withRate = rows.filter(p => p._rate.area && p._rate.loc);
+  mkChart('ch_rate', {type: 'bar', data: {labels: withRate.map(p => p.label), datasets: [
+      {label: 'Property ₹/sqft', data: withRate.map(p => Math.round(p._rate.area)), backgroundColor: '#2457d6'},
+      {label: 'Locality avg ₹/sqft', data: withRate.map(p => p._rate.loc.rateAvg), backgroundColor: '#aab6cf'}]},
+    options: {scales: {y: {beginAtZero: true}}}});
+}
+
+/* ---------- compare ---------- */
+function renderCompare() {
+  const all = listings();
+  cmpSel = cmpSel.filter(id => all.some(p => p.id === id));
+  $('#cmp_pick').innerHTML = all.map(p => `<label style="display:flex;gap:4px;align-items:center;color:var(--ink);font-size:13px"><input type="checkbox" style="width:auto" data-c="${p.id}" ${cmpSel.includes(p.id) ? 'checked' : ''}>${esc(p.label)}</label>`).join('') || '<span class="note">Add properties first.</span>';
+  const sel = cmpSel.map(id => enrich(all.find(p => p.id === id)));
+  const pal = ['#2457d6', '#1b8a4b', '#c27a00', '#8a2be2'];
+  mkChart('ch_radar', {type: 'radar', data: {labels: CRITERIA.map(c => c.k), datasets: sel.map((p, i) => ({label: p.label, data: CRITERIA.map(c => p.scores?.[c.k] || 0), borderColor: pal[i], backgroundColor: pal[i] + '22'}))},
+    options: {scales: {r: {min: 0, max: 5, ticks: {stepSize: 1}}}}});
+  const row = (l, f) => `<tr><th style="cursor:default">${l}</th>${sel.map(p => `<td>${f(p)}</td>`).join('')}</tr>`;
+  $('#cmp_table').innerHTML = sel.length ? '<table>' +
+    row('Property', p => `<b>${esc(p.label)}</b>`) + row('Locality', p => esc(locByKey(p.locality)?.name)) + row('BHK', p => p.bhk) +
+    row('Price', p => cr(p.price)) + row('₹/sqft', p => p._rate.area ? inr(p._rate.area) : '-') + row('vs market', p => p._rate.tag ? `${p._rate.tag} (${p._rate.delta.toFixed(0)}%)` : '-') +
+    row('All-in cost', p => cr(p._fin.total)) + row('EMI', p => inr(p._fin.emi)) + row('EMI % income', p => p._fin.ratio.toFixed(0) + '%') +
+    row('Score', p => `<span class="badge ${p._db.length ? 'b-bad' : scoreCls(p._score)}">${p._score}</span>`) +
+    CRITERIA.map(c => row(c.n, p => p.scores?.[c.k] || '-')).join('') + '</table>' : '<div class="note">Select properties above.</div>';
+}
+$('#cmp_pick').addEventListener('change', e => {
+  const id = e.target.dataset.c; if (!id) return;
+  if (e.target.checked) { if (cmpSel.length >= 4) { e.target.checked = false; return; } cmpSel.push(id); } else cmpSel = cmpSel.filter(x => x !== id);
+  renderCompare();
+});
+
+/* ---------- map ---------- */
+function renderMap() {
+  if (!window.L) { $('#map').innerHTML = '<div class="note" style="padding:16px">Map library could not load (offline?).</div>'; return; }
+  if (!map) { map = L.map('map').setView([18.56, 73.79], 12); L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution: '&copy; OpenStreetMap'}).addTo(map); }
+  markers.forEach(m => m.remove()); markers = [];
+  LOCS.forEach(l => { if (l.lat) markers.push(L.circle([l.lat, l.lng], {radius: 1200, color: '#2457d6', weight: 1, fillOpacity: .05}).bindTooltip(l.name, {permanent: true, direction: 'center', className: ''}).addTo(map)); });
+  buildings.forEach(p => {
+    const loc = locByKey(p.locality), sc = scoreOf(p), db = dealBreakers(p);
+    const lat = p.lat ?? (loc && loc.lat + (Math.random() - .5) * .006), lng = p.lng ?? (loc && loc.lng + (Math.random() - .5) * .006);
+    if (lat == null) return;
+    const c = db.length ? '#c62f2f' : sc >= 75 ? '#1b8a4b' : sc >= 55 ? '#c27a00' : '#c62f2f';
+    markers.push(L.circleMarker([lat, lng], {radius: 9, color: '#fff', weight: 2, fillColor: c, fillOpacity: 1})
+      .bindPopup(`<b>${esc(p.name)}</b><br>${p.units.map(u => `${esc(u.bhk)} BHK ${cr(u.price)}`).join('<br>')}<br>Score ${sc}${db.length ? ' (deal-breaker)' : ''}`).addTo(map));
+  });
+  (window.RATING_CONFIG?.commute || []).forEach(o => markers.push(L.marker([o.lat, o.lng], {icon: L.divIcon({className: '', html: '<div style="font-size:26px;line-height:1">🏢</div>', iconSize: [26, 26], iconAnchor: [13, 13]})})
+    .bindTooltip(esc(o.name), {permanent: true, direction: 'top', offset: [0, -12]}).addTo(map)));
+  drawNearby();
+}
+
+/* ---------- full-screen map ---------- */
+const fitMap = () => setTimeout(() => {
+  const on = document.fullscreenElement === $('#mapwrap') || $('#mapwrap').classList.contains('mapfull');
+  $('#mapfs').textContent = on ? 'Exit full screen' : 'Full screen';
+  map && map.invalidateSize();
+}, 100);
+$('#mapfs').onclick = () => {
+  if (document.fullscreenEnabled) document.fullscreenElement ? document.exitFullscreen() : $('#mapwrap').requestFullscreen();
+  else { $('#mapwrap').classList.toggle('mapfull'); fitMap(); } // iOS Safari has no element fullscreen
+};
+document.addEventListener('fullscreenchange', fitMap);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#mapwrap').classList.contains('mapfull')) { $('#mapwrap').classList.remove('mapfull'); fitMap(); } });
+
+/* ---------- nearby services (OpenStreetMap via Overpass; only on click) ---------- */
+const NB_CATS = [['school', 'Schools', '#2457d6', 'schools'], ['hospital', 'Hospitals', '#c62f2f', 'hospitals'], ['mall', 'Malls', '#8a2be2', 'mall'], ['park', 'Parks & gardens', '#1b8a4b', 'garden']];
+const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+let nbRadius = 3, nbOn = new Set(NB_CATS.map(c => c[0]));
+const nbKind = t => /^(school|college)$/.test(t.amenity) ? 'school' : /^(hospital|clinic)$/.test(t.amenity) ? 'hospital' : t.shop === 'mall' ? 'mall' : 'park';
+function haversine(a, b, c, d) {
+  const R = 6371, rad = Math.PI / 180, dLat = (c - a) * rad, dLng = (d - b) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a * rad) * Math.cos(c * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+async function nearby(lat, lng, km, force) {
+  const key = `${lat.toFixed(4)},${lng.toFixed(4)},${km}`, cache = load(LS.nb, {});
+  if (!force && cache[key]) return cache[key];
+  const around = `(around:${km * 1000},${lat},${lng})`;
+  const q = `[out:json][timeout:25];(nwr["amenity"~"^(school|college)$"]${around};nwr["amenity"~"^(hospital|clinic)$"]${around};nwr["shop"="mall"]${around};nwr["leisure"~"^(park|garden)$"]${around};);out center 400;`;
+  let err;
+  for (const url of OVERPASS) { // second entry is the retry mirror
+    try {
+      const r = await fetch(url, {method: 'POST', body: 'data=' + encodeURIComponent(q)});
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const best = {};
+      for (const el of (await r.json()).elements) {
+        const t = el.tags || {}, la = el.lat ?? el.center?.lat, lo = el.lon ?? el.center?.lon;
+        if (!t.name || la == null) continue;
+        const k = nbKind(t), id = k + '|' + t.name.toLowerCase(), d = haversine(lat, lng, la, lo);
+        if (!best[id] || d < best[id].d) best[id] = {k, name: t.name, d, lat: la, lng: lo};
+      }
+      const out = Object.fromEntries(NB_CATS.map(([k]) => { const all = Object.values(best).filter(x => x.k === k).sort((a, b) => a.d - b.d); return [k, {n: all.length, top: all.slice(0, 5)}]; }));
+      cache[key] = out; save(LS.nb, cache);
+      return out;
+    } catch (e) { err = e; }
+  }
+  throw err;
+}
+function coordsOf(p) {
+  if (p.lat != null && p.lng != null) return {lat: p.lat, lng: p.lng, approx: false};
+  const l = locByKey(p.locality);
+  return l && l.lat ? {lat: l.lat, lng: l.lng, approx: true} : null;
+}
+async function openNearby(id, force) {
+  const p = buildings.find(x => x.id === id), c = p && coordsOf(p);
+  if (!c) { alert('This property has no coordinates and its locality has no centre.'); return; }
+  $('#dlg_body').innerHTML = `<div class="nb"><h2>Nearby: ${esc(p.name)}</h2>
+    <div class="note">${c.approx ? 'Approximate: using the locality centre because this property has no coordinates.' : 'Using the property coordinates.'} Data: OpenStreetMap, so coverage varies.</div>
+    <div class="toolbar" style="margin-top:8px"><div><label>Radius</label><select id="nb_r">${[1, 2, 3, 5].map(k => `<option value="${k}" ${k === nbRadius ? 'selected' : ''}>${k} km</option>`).join('')}</select></div>
+      <button class="btn sec" id="nb_ref">Refresh</button><button class="btn sec" id="nb_map" disabled>Show on map</button><button class="btn sec" id="nb_close">Close</button></div>
+    <div id="nb_out" class="note">Loading...</div></div>`;
+  $('#nb_r').onchange = e => { nbRadius = +e.target.value; openNearby(id); };
+  $('#nb_ref').onclick = () => openNearby(id, true);
+  $('#nb_close').onclick = () => $('#dlg').close();
+  if (!$('#dlg').open) $('#dlg').showModal();
+  try {
+    const res = await nearby(c.lat, c.lng, nbRadius, force);
+    if (!$('#nb_out')) return;
+    $('#nb_out').className = '';
+    $('#nb_out').innerHTML = NB_CATS.map(([k, n, , crit]) => `<h3>${n} <span class="note">(${res[k].n} within ${nbRadius} km; rate "${esc(CRITERIA.find(x => x.k === crit).n)}" yourself)</span></h3>` +
+      (res[k].top.length ? '<ol>' + res[k].top.map(x => `<li>${esc(x.name)} <span class="note">${x.d.toFixed(1)} km</span></li>`).join('') + '</ol>' : '<div class="note">None found in OpenStreetMap.</div>')).join('');
+    $('#nb_map').disabled = false;
+    $('#nb_map').onclick = () => { nb = {id, name: p.name, res}; $('#dlg').close(); document.querySelector('[data-t="mapsec"]').click(); map && map.setView([c.lat, c.lng], 14); };
+  } catch (e) {
+    if ($('#nb_out')) $('#nb_out').innerHTML = `<div class="flag">Lookup failed (${esc(e.message)}). Overpass may be busy or you are offline. Try Refresh in a minute.</div>`;
+  }
+}
+function drawNearby() {
+  nbGroup?.remove();
+  const ctl = $('#nbctl');
+  ctl.style.display = nb ? 'flex' : 'none';
+  if (!nb) return;
+  ctl.innerHTML = NB_CATS.map(([k, n, col]) => `<label style="border-left:4px solid ${col}"><input type="checkbox" data-nbk="${k}" ${nbOn.has(k) ? 'checked' : ''}>${n}</label>`).join('');
+  nbGroup = L.layerGroup().addTo(map);
+  NB_CATS.filter(([k]) => nbOn.has(k)).forEach(([k, n, col]) => nb.res[k].top.forEach(x =>
+    L.circleMarker([x.lat, x.lng], {radius: 6, color: '#fff', weight: 1, fillColor: col, fillOpacity: 1}).bindTooltip(`${esc(x.name)} (${x.d.toFixed(1)} km)`).addTo(nbGroup)));
+}
+$('#nbctl').addEventListener('change', e => { const k = e.target.dataset.nbk; if (!k) return; e.target.checked ? nbOn.add(k) : nbOn.delete(k); drawNearby(); });
+
+/* ---------- files ---------- */
+const fsize = n => n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+// File tag: building + offerings; no offerings = shared by the whole building. Legacy files only have propertyId (= building id).
+const ftag = f => ({b: f.buildingId ?? f.propertyId ?? '', u: f.unitIds || []});
+const unitName = u => `${u.bhk} BHK${u.carpet ? ' · ' + u.carpet + ' sqft' : ''}`;
+const unitBoxes = (bid, sel) => (buildings.find(x => x.id === bid)?.units || []).map(u =>
+  `<label style="display:inline-flex;gap:4px;align-items:center;margin-right:10px;color:var(--ink)"><input type="checkbox" style="width:auto" value="${esc(u.id)}" ${sel.includes(u.id) ? 'checked' : ''}>${esc(unitName(u))}</label>`).join('');
+const checkedUnits = box => [...box.querySelectorAll('input:checked')].map(i => i.value);
+const bOptions = cur => '<option value="">None</option>' + buildings.map(b => `<option value="${esc(b.id)}" ${b.id === cur ? 'selected' : ''}>${esc(b.name)}</option>`).join('');
+function appliesTo(f) {
+  const t = ftag(f); if (!t.b) return '-';
+  const b = buildings.find(x => x.id === t.b); if (!b) return '(deleted building)';
+  const names = t.u.map(id => { const u = b.units.find(x => x.id === id); return u ? u.bhk + ' BHK' : '(removed offering)'; });
+  return b.name + ' · ' + (names.length ? names.join(', ') : 'all offerings');
+}
+const fileMatches = (f, flt) => {
+  if (!flt) return true;
+  const [bid, uid_] = flt.split('|'), t = ftag(f);
+  return t.b === bid && (!uid_ || !t.u.length || t.u.includes(uid_));
+};
+async function renderFiles() {
+  const served = location.protocol.startsWith('http');
+  $('#files_note').textContent = served ? '' : 'Run node server.js to use files.';
+  $('#fl_up').disabled = !served;
+  const curB = $('#fl_prop').value, curU = checkedUnits($('#fl_units')), curF = $('#fl_filter').value;
+  $('#fl_prop').innerHTML = bOptions(curB);
+  $('#fl_units').innerHTML = unitBoxes($('#fl_prop').value, curU);
+  $('#fl_unitwrap').style.display = $('#fl_prop').value ? '' : 'none';
+  $('#fl_filter').innerHTML = '<option value="">All files</option>' + buildings.map(b => `<option value="${esc(b.id)}">${esc(b.name)}${b.units.length > 1 ? ' (any offering)' : ''}</option>` +
+    (b.units.length > 1 ? b.units.map(u => `<option value="${esc(b.id)}|${esc(u.id)}">${esc(b.name)} · ${esc(unitName(u))}</option>`).join('') : '')).join('');
+  $('#fl_filter').value = curF;
+  if (!served) { $('#fl_table').innerHTML = ''; return; }
+  try {
+    const list = (await (await fetch('/api/files')).json()).filter(f => fileMatches(f, $('#fl_filter').value));
+    $('#fl_table').innerHTML = '<thead><tr><th>Name</th><th>Applies to</th><th>Size</th><th>Uploaded</th><th></th></tr></thead><tbody>' + (list.map(f =>
+      `<tr><td><b>${esc(f.name)}</b></td><td>${esc(appliesTo(f))}</td><td>${fsize(f.size)}</td><td>${esc(f.uploaded.slice(0, 10))}</td>
+        <td><button class="btn sec" data-fopen="${f.id}">Open</button> <button class="btn sec" data-ftag="${f.id}">Tag</button> <button class="btn del" data-fdel="${f.id}">Delete</button></td></tr>`
+    ).join('') || '<tr><td colspan="5" class="note">No files yet.</td></tr>') + '</tbody>';
+  } catch (e) { $('#fl_table').innerHTML = `<tr><td class="note">Could not load files: ${esc(e.message)}</td></tr>`; }
+}
+$('#fl_prop').onchange = () => { $('#fl_units').innerHTML = unitBoxes($('#fl_prop').value, []); $('#fl_unitwrap').style.display = $('#fl_prop').value ? '' : 'none'; };
+$('#fl_filter').onchange = renderFiles;
+function openTag(f) {
+  const t = ftag(f);
+  $('#dlg_body').innerHTML = `<h2>Tag file</h2><div class="note">${esc(f.name)}</div>
+    <label>Building</label><select id="tg_b">${bOptions(t.b)}</select>
+    <label>Offerings (none ticked = shared by all offerings)</label><div id="tg_u">${unitBoxes(t.b, t.u)}</div>
+    <div class="toolbar" style="justify-content:flex-end;margin-top:8px"><button class="btn sec" id="tg_c">Cancel</button><button class="btn" id="tg_s">Save</button></div>`;
+  $('#tg_b').onchange = () => $('#tg_u').innerHTML = unitBoxes($('#tg_b').value, []);
+  $('#tg_c').onclick = () => $('#dlg').close();
+  $('#tg_s').onclick = async () => {
+    const r = await fetch('/api/files/' + f.id, {method: 'PATCH', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({buildingId: $('#tg_b').value, unitIds: $('#tg_b').value ? checkedUnits($('#tg_u')) : []})});
+    if (!r.ok) { alert('Tag failed: ' + (await r.json()).error); return; }
+    $('#dlg').close(); renderFiles();
+  };
+  $('#dlg').showModal();
+}
+$('#fl_up').onclick = async () => {
+  const picked = [...$('#fl_pick').files], st = $('#fl_status');
+  if (!picked.length) { st.textContent = 'Choose files first.'; return; }
+  const errs = [];
+  for (const [i, f] of picked.entries()) {
+    st.textContent = `Uploading ${i + 1}/${picked.length}: ${f.name}`;
+    try {
+      const r = await fetch('/api/files', {method: 'POST', headers: {'X-Filename': encodeURIComponent(f.name), 'X-Building-Id': $('#fl_prop').value, 'X-Unit-Ids': checkedUnits($('#fl_units')).join(',')}, body: f});
+      if (!r.ok) throw new Error((await r.json()).error);
+    } catch (e) { errs.push(`${f.name}: ${e.message}`); }
+  }
+  st.textContent = errs.length ? 'Failed: ' + errs.join('; ') : `Uploaded ${picked.length} file(s).`;
+  $('#fl_pick').value = '';
+  renderFiles();
+};
+/* Viewer: the type is re-verified from content bytes (same table as server.js) before rendering. */
+const hexAt = (b, h) => [...b.slice(0, h.length / 2)].map(x => x.toString(16).padStart(2, '0')).join('') === h;
+const SIGS = {pdf: b => hexAt(b, '25504446'), png: b => hexAt(b, '89504e47'), jpg: b => hexAt(b, 'ffd8ff'), gif: b => hexAt(b, '47494638'),
+  webp: b => hexAt(b, '52494646') && String.fromCharCode(...b.slice(8, 12)) === 'WEBP',
+  docx: b => hexAt(b, '504b0304'), xlsx: b => hexAt(b, '504b0304'), doc: b => hexAt(b, 'd0cf11e0a1b11ae1'), xls: b => hexAt(b, 'd0cf11e0a1b11ae1'),
+  txt: b => !b.includes(0), csv: b => !b.includes(0)};
+SIGS.jpeg = SIGS.jpg;
+const scripts = {};
+const loadScript = url => scripts[url] ??= new Promise((ok, no) => { const s = document.createElement('script'); s.src = url; s.onload = ok; s.onerror = () => { delete scripts[url]; no(new Error('could not load ' + url)); }; document.head.append(s); });
+let vurls = [];
+const blobUrl = (blob) => { const u = URL.createObjectURL(blob); vurls.push(u); return u; };
+$('#viewer').addEventListener('close', () => { vurls.forEach(URL.revokeObjectURL); vurls = []; $('#v_body').innerHTML = ''; });
+$('#v_close').onclick = () => $('#viewer').close();
+function sheetsView(wb, body) {
+  const show = n => {
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[n], {header: 1}).slice(0, 500);
+    body.querySelector('.v_sheet').innerHTML = '<div class="tw"><table><tbody>' + rows.map(r => '<tr>' + [...r].map(c => `<td>${esc(c)}</td>`).join('') + '</tr>').join('') + '</tbody></table></div>' + (rows.length === 500 ? '<p class="note">First 500 rows shown.</p>' : '');
+  };
+  body.innerHTML = (wb.SheetNames.length > 1 ? '<div>' + wb.SheetNames.map((n, i) => `<button class="btn sec" data-sh="${i}">${esc(n)}</button>`).join(' ') + '</div>' : '') + '<div class="v_sheet"></div>';
+  body.onclick = e => { const i = e.target.dataset.sh; if (i != null) show(wb.SheetNames[i]); };
+  show(wb.SheetNames[0]);
+}
+async function openViewer(f) {
+  const body = $('#v_body'), dlg = $('#viewer'), ext = f.name.split('.').pop().toLowerCase();
+  $('#v_name').textContent = f.name + (ftag(f).b ? ' — ' + appliesTo(f) : ''); $('#v_dl').href = '/files/' + f.id; $('#v_dl').download = f.name;
+  body.onclick = null; body.innerHTML = '<p class="note">Loading…</p>';
+  if (!dlg.open) dlg.showModal();
+  const msg = t => body.innerHTML = `<p class="note">${esc(t)}</p>`;
+  try {
+    const buf = await (await fetch('/files/' + f.id)).arrayBuffer(), bytes = new Uint8Array(buf);
+    if (!SIGS[ext]?.(bytes.subarray(0, 4096))) return msg(`Warning: content does not match .${ext}. Not displayed; use Download if you trust it.`);
+    if (ext === 'pdf') body.innerHTML = `<iframe src="${blobUrl(new Blob([buf], {type: 'application/pdf'}))}" style="width:100%;height:100%;border:0"></iframe>`;
+    else if (f.type.startsWith('image/')) body.innerHTML = `<img src="${blobUrl(new Blob([buf], {type: f.type}))}" style="max-width:100%">`;
+    else if (ext === 'txt') body.innerHTML = '<pre style="white-space:pre-wrap;margin:0"></pre>', body.firstChild.textContent = new TextDecoder().decode(buf);
+    else if (ext === 'csv' || ext === 'xls' || ext === 'xlsx') {
+      await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+      sheetsView(XLSX.read(buf, {type: 'array'}), body);
+    } else if (ext === 'docx') {
+      await loadScript('https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js');
+      const html = (await mammoth.convertToHtml({arrayBuffer: buf})).value;
+      body.innerHTML = '<iframe sandbox style="width:100%;height:100%;border:0;background:#fff"></iframe>';
+      body.firstChild.srcdoc = '<body style="font-family:sans-serif;color:#111;background:#fff;padding:12px">' + html;
+    } else msg('No in-page viewer for this file type. Use Download.');
+  } catch (e) { msg('Could not display: ' + e.message + '. Use Download.'); }
+}
+$('#fl_table').addEventListener('click', async e => {
+  const oid = e.target.dataset.fopen, tid = e.target.dataset.ftag;
+  if (oid || tid) { const f = (await (await fetch('/api/files')).json()).find(f => f.id === (oid || tid)); return oid ? openViewer(f) : openTag(f); }
+  const id = e.target.dataset.fdel; if (!id || !confirm('Delete this file?')) return;
+  const r = await fetch('/api/files/' + id, {method: 'DELETE'});
+  if (!r.ok) alert('Delete failed');
+  renderFiles();
+});
+
+/* ---------- localities ---------- */
+function renderLocs() {
+  const ref = LOCS[0];
+  $('#loc_note').textContent = ref ? `Market figures researched from portals and news, ${ref.asOf || ''}. Portals disagree by 10-30%, so use as a band. Edit data/localities.js to update, and cross-check with brokers and registered sale deeds (IGR).` : 'No locality data found.';
+  $('#loc_cards').innerHTML = LOCS.map(l => {
+    const riskCls = r => r === 'low' ? 'b-good' : r === 'medium' ? 'b-warn' : 'b-bad';
+    const mine = buildings.filter(p => p.locality === l.key).length;
+    return `<div class="card loc"><h3><span>${esc(l.name)}</span><span class="badge b-mute">${mine} visited</span></h3>
+      <div><b>${inr(l.rateMin)} - ${inr(l.rateMax)}</b> /sq ft <span class="note">(avg ${inr(l.rateAvg)})</span></div>
+      <div class="note">2 BHK: ${esc(l.bhk2)} | 3 BHK: ${esc(l.bhk3)}</div>
+      <div style="margin:6px 0"><span class="badge ${riskCls(l.floodRisk)}">Waterlogging: ${esc(l.floodRisk)}</span> <span class="badge ${riskCls(l.waterRisk)}">Water: ${esc(l.waterRisk)}</span> <span class="badge ${riskCls(l.powerRisk)}">Power: ${esc(l.powerRisk)}</span></div>
+      <div class="note">${esc(l.risks || '')}</div>
+      <b>Pros</b><ul>${(l.pros || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+      <b>Cons</b><ul>${(l.cons || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+      <div class="note">Schools: ${esc(l.schools)}<br>Hospitals: ${esc(l.hospitals)}<br>Malls/markets: ${esc(l.malls)}<br>Gardens: ${esc(l.gardens)}<br>Transport: ${esc(l.transport)}</div>
+      <div class="note" style="margin-top:6px">Source: ${esc(l.source || 'n/a')} (${esc(l.asOf || '')})</div></div>`;
+  }).join('');
+}
+
+function renderAll() { renderAfford(); fillFilters(); renderTable(); renderOverview(); renderLocs();
+  if ($('#compare').classList.contains('on')) renderCompare();
+  if ($('#mapsec').classList.contains('on')) renderMap(); }
+renderAll();
+if (needMigrate) persist();
+</script>
+</body>
+</html>
